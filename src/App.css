@@ -1,0 +1,64 @@
+body {
+    margin: 0;
+    font-family: 'Arial', sans-serif;
+}
+
+main {
+    padding-top: 80px; /* Отступ для контента под header */
+}
+
+header {
+    height: 70px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: #b0e0e6; /* Цвет фона для header */
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+}
+
+.nav-buttons {
+    display: flex;
+    justify-content: space-around;
+    width: 300px;
+}
+
+.nav-buttons button {
+    margin: 0 10px;
+    padding: 10px 15px;
+    font-size: 1rem;
+    cursor: pointer;
+    background-color: #ff7f7f;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    transition: background-color 0.3s;
+}
+
+.nav-buttons button:hover {
+    background-color: #e06b6b;
+}
+
+.account-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.account-circle {
+    width: 40px;
+    height: 40px;
+    background-color: #808080;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: bold;
+    cursor: pointer;
+}
