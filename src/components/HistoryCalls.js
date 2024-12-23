@@ -48,6 +48,7 @@ const HistoryCalls = ({ calls, onDeleteCall }) => {
                     <thead>
                     <tr>
                         <th>ФИО</th>
+                        <th>Возраст</th>
                         <th>Адрес</th>
                         <th>Тип вызова</th>
                         <th>Дата и время</th>
@@ -59,6 +60,7 @@ const HistoryCalls = ({ calls, onDeleteCall }) => {
                     {filteredCalls.map((call) => (
                         <tr key={call.id}>
                             <td>{call.name}</td>
+                            <td>{call.age}</td>
                             <td>{call.address}</td>
                             <td>{call.type}</td>
                             <td>{call.dateTime.replace("T", " ")}</td>

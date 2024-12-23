@@ -26,7 +26,7 @@ const CreateCall = ({ onAddCall }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (form.name && form.address) {
+        if (form.name && form.age && form.address) {
             onAddCall(form); // Добавляем вызов
             alert("Вызов успешно создан!");
             setForm({
@@ -38,7 +38,7 @@ const CreateCall = ({ onAddCall }) => {
                 comments: "",
             });
         } else {
-            alert("Пожалуйста, заполните обязательные поля: ФИО и Адрес.");
+            alert("Пожалуйста, заполните обязательные поля: ФИО, возраст и адрес.");
         }
     };
 
@@ -51,7 +51,7 @@ const CreateCall = ({ onAddCall }) => {
             </label>
             <label>
                 Возраст:
-                <input type="number" name="age" value={form.age} onChange={handleChange} />
+                <input type="number" name="age" value={form.age} onChange={handleChange} required />
             </label>
             <label>
                 Адрес:
