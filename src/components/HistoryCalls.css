@@ -2,6 +2,7 @@
     margin: 20px auto;
     padding: 20px;
     max-width: 900px;
+    transform: translateY(15%); /* Центрирование по вертикали */
 }
 
 .history-calls h2 {

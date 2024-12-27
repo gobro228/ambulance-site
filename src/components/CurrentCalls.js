@@ -100,7 +100,6 @@ const CurrentCalls = () => {
                                     <option value="На месте">На месте</option>
                                     <option value="В пути обратно">В пути обратно</option>
                                     <option value="Перевозка">Перевозка</option>
-                                    <option value="Завершённый">Завершённый</option>
                                 </select>
                             </td>
                             <td>

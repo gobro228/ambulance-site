@@ -28,6 +28,7 @@ def call_helper(call) -> dict:
         "date": call["date"],
         "comment": call.get("comment", ""),
         "status": call.get("status", "Принят"),
+        "completed_at": call["completed_at"],
     }
 
 # Создание вызова
@@ -48,25 +49,6 @@ async def get_calls():
         calls.append(call_helper(call))
     return calls
 
-@app.put("/calls/{call_id}/status")
-async def update_call_status(call_id: str, status_update: dict):
-    """
-    Обновление статуса вызова
-    """
-    new_status = status_update.get("status")
-    if not new_status:
-        raise HTTPException(status_code=400, detail="Не указан статус")
-
-    result = await calls_collection.update_one(
-        {"_id": ObjectId(call_id)}, {"$set": {"status": new_status}}
-    )
-
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Вызов не найден")
-
-    return {"message": "Статус обновлён", "status": new_status}
-
-
 # Подключение к базе данных при старте
 @app.on_event("startup")
 async def startup():
@@ -86,6 +68,7 @@ async def root():
 
 from datetime import datetime
 
+# Обновление статуса вызова
 @app.put("/calls/{call_id}/status")
 async def update_call_status(call_id: str, status_update: dict):
     """
@@ -100,18 +83,27 @@ async def update_call_status(call_id: str, status_update: dict):
     update_data = {"status": new_status}
 
     if new_status == "Завершённый":
-        update_data["completed_at"] = datetime.now().isoformat()
+        update_data["completed_at"] = datetime.utcnow() # исправить дату!!!!!!!!!!!!!!!!!!!!!!!!!
         print(f"Добавляем completed_at: {update_data['completed_at']}")  # Логируем время завершения
 
 
     result = await calls_collection.update_one(
-        {"_id": ObjectId(call_id)}, {"$set": update_data}
+        {"_id": ObjectId(call_id)},
+        {"$set": update_data}
     )
 
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Вызов не найден")
 
-    return {"message": "Статус обновлён", "status": new_status, "completed_at": update_data.get("completed_at")}
+    return {
+    "message": "Статус обновлён",
+    "status": new_status,
+    "completed_at": update_data.get("completed_at")
+    }
 
-
-    return {"message": "Статус обновлён", "status": new_status}
+@app.delete("/calls/{call_id}")
+async def delete_call(call_id: str):
+    result = await calls_collection.delete_one({"_id": ObjectId(call_id)})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Вызов не найден")
+    return {"message": "Вызов успешно удалён"}

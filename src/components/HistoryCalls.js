@@ -1,39 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import "./HistoryCalls.css";
 
-const HistoryCalls = () => {
-    const [completedCalls, setCompletedCalls] = useState([]); // Состояние для завершённых вызовов
-    const [loading, setLoading] = useState(true); // Индикатор загрузки
-
-    // Загрузка завершённых вызовов с сервера
-    const fetchCompletedCalls = async () => {
-        try {
-            const response = await fetch("http://127.0.0.1:8000/calls/"); // Запрос к основному эндпоинту вызовов
-            if (response.ok) {
-                const data = await response.json();
-                // Фильтруем вызовы со статусом "Завершённый"
-                const filteredData = data.filter((call) => call.status === "Завершённый");
-                setCompletedCalls(filteredData); // Сохраняем отфильтрованные данные в состояние
-            } else {
-                console.error("Ошибка при загрузке завершённых вызовов:", response.statusText);
-            }
-        } catch (error) {
-            console.error("Ошибка при подключении к серверу:", error);
-        } finally {
-            setLoading(false); // Отключаем индикатор загрузки
-        }
-    };
-
-    useEffect(() => {
-        fetchCompletedCalls();
-    }, []);
+const HistoryCalls = ({ calls, onDeleteCall }) => {
+    // Фильтруем только завершённые вызовы
+    const completedCalls = calls.filter((call) => call.status === "Завершённый");
 
     return (
         <div className="history-calls">
             <h2>История вызовов</h2>
-            {loading ? (
-                <p>Загрузка...</p>
-            ) : completedCalls.length === 0 ? (
+            {completedCalls.length === 0 ? (
                 <p>История вызовов пуста.</p>
             ) : (
                 <table>
@@ -46,6 +21,7 @@ const HistoryCalls = () => {
                         <th>Дата и время</th>
                         <th>Комментарии</th>
                         <th>Время завершения</th>
+                        <th>Действия</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -57,10 +33,11 @@ const HistoryCalls = () => {
                             <td>{call.type}</td>
                             <td>{call.date.replace("T", " ")}</td>
                             <td>{call.comment || "—"}</td>
+                            <td>{call.completed_at.replace("T", " ")}</td>
                             <td>
-                                {call.completed_at
-                                    ? new Date(call.completed_at).toLocaleString()
-                                    : "—"}
+                                <button onClick={() => onDeleteCall(call.id)}>
+                                    Удалить
+                                </button>
                             </td>
                         </tr>
                     ))}
