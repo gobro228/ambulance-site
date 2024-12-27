@@ -1,48 +1,40 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./HistoryCalls.css";
 
-const HistoryCalls = ({ calls, onDeleteCall }) => {
-    const [filter, setFilter] = useState("Все"); // Фильтр по типу вызова
-    const [sortOrder, setSortOrder] = useState("desc"); // Сортировка по дате
+const HistoryCalls = () => {
+    const [completedCalls, setCompletedCalls] = useState([]); // Состояние для завершённых вызовов
+    const [loading, setLoading] = useState(true); // Индикатор загрузки
 
-    // Фильтрация и сортировка завершённых вызовов
-    const filteredCalls = calls
-        .filter((call) => call.status === "Завершённый")
-        .filter((call) => (filter === "Все" ? true : call.type === filter))
-        .sort((a, b) =>
-            sortOrder === "asc"
-                ? new Date(a.dateTime) - new Date(b.dateTime)
-                : new Date(b.dateTime) - new Date(a.dateTime)
-        );
+    // Загрузка завершённых вызовов с сервера
+    const fetchCompletedCalls = async () => {
+        try {
+            const response = await fetch("http://127.0.0.1:8000/calls/"); // Запрос к основному эндпоинту вызовов
+            if (response.ok) {
+                const data = await response.json();
+                // Фильтруем вызовы со статусом "Завершённый"
+                const filteredData = data.filter((call) => call.status === "Завершённый");
+                setCompletedCalls(filteredData); // Сохраняем отфильтрованные данные в состояние
+            } else {
+                console.error("Ошибка при загрузке завершённых вызовов:", response.statusText);
+            }
+        } catch (error) {
+            console.error("Ошибка при подключении к серверу:", error);
+        } finally {
+            setLoading(false); // Отключаем индикатор загрузки
+        }
+    };
+
+    useEffect(() => {
+        fetchCompletedCalls();
+    }, []);
 
     return (
         <div className="history-calls">
             <h2>История вызовов</h2>
-
-            {/* Фильтрация и сортировка */}
-            <div className="filters">
-                <label>
-                    Фильтр по типу:
-                    <select value={filter} onChange={(e) => setFilter(e.target.value)}>
-                        <option value="Все">Все</option>
-                        <option value="Зелёный поток">Зелёный поток</option>
-                        <option value="Жёлтый поток">Жёлтый поток</option>
-                        <option value="Красный поток">Красный поток</option>
-                    </select>
-                </label>
-
-                <label>
-                    Сортировка:
-                    <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
-                        <option value="desc">По убыванию даты</option>
-                        <option value="asc">По возрастанию даты</option>
-                    </select>
-                </label>
-            </div>
-
-            {/* Таблица с историей вызовов */}
-            {filteredCalls.length === 0 ? (
-                <p>Завершённых вызовов нет.</p>
+            {loading ? (
+                <p>Загрузка...</p>
+            ) : completedCalls.length === 0 ? (
+                <p>История вызовов пуста.</p>
             ) : (
                 <table>
                     <thead>
@@ -53,20 +45,22 @@ const HistoryCalls = ({ calls, onDeleteCall }) => {
                         <th>Тип вызова</th>
                         <th>Дата и время</th>
                         <th>Комментарии</th>
-                        <th>Действие</th> {/* Добавляем заголовок для кнопки */}
+                        <th>Время завершения</th>
                     </tr>
                     </thead>
                     <tbody>
-                    {filteredCalls.map((call) => (
+                    {completedCalls.map((call) => (
                         <tr key={call.id}>
-                            <td>{call.name}</td>
-                            <td>{call.age}</td>
+                            <td>{call.fio}</td>
+                            <td>{call.age || "—"}</td>
                             <td>{call.address}</td>
                             <td>{call.type}</td>
-                            <td>{call.dateTime.replace("T", " ")}</td>
-                            <td>{call.comments || "—"}</td>
+                            <td>{call.date.replace("T", " ")}</td>
+                            <td>{call.comment || "—"}</td>
                             <td>
-                                <button onClick={() => onDeleteCall(call.id)}>Удалить</button> {/* Кнопка удаления */}
+                                {call.completed_at
+                                    ? new Date(call.completed_at).toLocaleString()
+                                    : "—"}
                             </td>
                         </tr>
                     ))}
