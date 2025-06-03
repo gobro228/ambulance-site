@@ -13,9 +13,9 @@ function App() {
     const [isMenuOpen, setIsMenuOpen] = useState(false); // Состояние меню профиля
 
     const users = [
-        { username: "admin", password: "admin", role: "admin", avatarPath: "assets/admin.png" },
-        { username: "operator", password: "operator", role: "operator", avatarPath: "assets/operator.png" },
-        { username: "doctor", password: "doctor", role: "doctor", avatarPath: "assets/doctor.png" },
+        { username: "admin", password: "admin", role: "admin", avatarPath: "./assets/admin.png" },
+        { username: "operator", password: "operator", role: "operator", avatarPath: "./assets/operator.png" },
+        { username: "doctor", password: "doctor", role: "doctor", avatarPath: "./assets/doctor.png" },
     ];
 
     const login = (username, password) => {

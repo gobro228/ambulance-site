@@ -28,12 +28,12 @@ const HistoryCalls = ({ calls, onDeleteCall }) => {
                     {completedCalls.map((call) => (
                         <tr key={call.id}>
                             <td>{call.fio}</td>
-                            <td>{call.age || "—"}</td>
+                            <td>{call.age}</td>
                             <td>{call.address}</td>
                             <td>{call.type}</td>
-                            <td>{call.date.replace("T", " ")}</td>
+                            <td>{call.date}</td>
                             <td>{call.comment || "—"}</td>
-                            <td>{call.completed_at.replace("T", " ")}</td>
+                            <td>{call.completed_at ? call.completed_at.replace("T", " ") : "—"}</td>
                             <td>
                                 <button onClick={() => onDeleteCall(call.id)}>
                                     Удалить

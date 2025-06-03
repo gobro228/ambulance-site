@@ -23,7 +23,7 @@ const Header = ({ onNavigate, currentUser, onLogout, toggleMenu, isMenuOpen }) =
                         </div>
                         {isMenuOpen && (
                             <div className="profile-menu">
-                                <button onClick={() => onNavigate("profile")}>Посмотреть профиль</button>
+                                {/*<button onClick={() => onNavigate("profile")}>Посмотреть профиль</button>*/}
                                 <button onClick={onLogout}>Выйти</button>
                             </div>
                         )}

@@ -1,0 +1,41 @@
+/* Login.css */
+form {
+    background-color: #f9f9f9; /* Светлый фон для формы */
+    border: 1px solid #ddd; /* Лёгкая рамка */
+    border-radius: 8px; /* Скруглённые углы */
+    padding: 20px; /* Внутренние отступы */
+    max-width: 400px; /* Максимальная ширина формы */
+    margin: 50px auto; /* Центрирование на странице */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Тень для объёма */
+    text-align: center; /* Центровка текста */
+}
+
+h2 {
+    color: #333; /* Тёмно-серый цвет текста */
+    margin-bottom: 20px; /* Отступ снизу */
+}
+
+input {
+    display: block; /* Каждое поле на новой строке */
+    width: 90%; /* Заполнение всей ширины формы */
+    padding: 10px; /* Внутренний отступ */
+    margin-bottom: 15px; /* Расстояние между полями */
+    border: 1px solid #ccc; /* Светлая рамка */
+    border-radius: 4px; /* Лёгкое скругление углов */
+    font-size: 16px; /* Размер шрифта */
+}
+
+button {
+    background-color: #ff4d4d; /* Красный цвет кнопки */
+    color: #fff; /* Белый текст */
+    border: none; /* Без рамки */
+    border-radius: 4px; /* Скруглённые углы */
+    padding: 10px 20px; /* Внутренние отступы */
+    font-size: 16px; /* Размер шрифта */
+    cursor: pointer; /* Курсор-указатель */
+    transition: background-color 0.3s ease; /* Плавный переход цвета */
+}
+
+button:hover {
+    background-color: #e63939; /* Темнее при наведении */
+}
