@@ -4,6 +4,7 @@ import CreateCall from "./components/CreateCall";
 import CurrentCalls from "./components/CurrentCalls";
 import HistoryCalls from "./components/HistoryCalls";
 import Login from "./components/Login";
+import { Warehouse } from "./frontend/pages/Warehouse.tsx";
 
 function App() {
     const [page, setPage] = useState("create"); // Активная вкладка
@@ -142,6 +143,8 @@ function App() {
                 return <CurrentCalls calls={calls} onUpdateStatus={updateCallStatus} />;
             case "history":
                 return <HistoryCalls calls={calls} onDeleteCall={deleteCall} />;
+            case "warehouse":
+                return <Warehouse />;
             case "profile":
                 return <h2>Профиль пользователя: {currentUser.username}</h2>;
             case "login":
