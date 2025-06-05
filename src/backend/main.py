@@ -519,3 +519,97 @@ async def replenish_inventory_item(item_id: str, amount: dict):
         logger.error(f"Ошибка при пополнении запаса: {str(e)}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/inventory/items/{item_id}/decrease")
+async def decrease_inventory_item(item_id: str, amount: dict):
+    """Уменьшение запаса товара на складе"""
+    try:
+        decrease_amount = amount.get("amount", 0)
+        if not isinstance(decrease_amount, (int, float)) or decrease_amount <= 0:
+            raise HTTPException(status_code=400, detail="Количество должно быть положительным числом")
+
+        # Находим товар
+        item = await inventory_collection.find_one({"_id": ObjectId(item_id)})
+        if not item:
+            raise HTTPException(status_code=404, detail="Товар не найден")
+
+        # Проверяем, достаточно ли товара для списания
+        if item["quantity"] < decrease_amount:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Недостаточно товара на складе. В наличии: {item['quantity']} {item['unit']}"
+            )
+
+        # Обновляем количество
+        new_quantity = item["quantity"] - decrease_amount
+        result = await inventory_collection.update_one(
+            {"_id": ObjectId(item_id)},
+            {
+                "$set": {
+                    "quantity": new_quantity,
+                    "updated_at": datetime.now()
+                }
+            }
+        )
+
+        if result.modified_count == 0:
+            raise HTTPException(status_code=500, detail="Не удалось обновить количество")
+
+        # Получаем обновленный товар
+        updated_item = await inventory_collection.find_one({"_id": ObjectId(item_id)})
+        updated_item["_id"] = str(updated_item["_id"])
+        return updated_item
+
+    except Exception as e:
+        logger.error(f"Ошибка при уменьшении запаса: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/inventory/{item_id}")
+async def delete_inventory_item(item_id: str):
+    """Удаление предмета инвентаря"""
+    try:
+        logger.info(f"Удаляем предмет инвентаря с ID: {item_id}")
+        if inventory_collection is None:
+            logger.error("Коллекция инвентаря не инициализирована")
+            return JSONResponse(
+                status_code=500,
+                content={"detail": "Коллекция инвентаря не инициализирована"}
+            )
+        
+        # Проверяем, существует ли предмет
+        item = await inventory_collection.find_one({"_id": ObjectId(item_id)})
+        if not item:
+            logger.error(f"Предмет с ID {item_id} не найден")
+            return JSONResponse(
+                status_code=404,
+                content={"detail": "Предмет не найден"}
+            )
+        
+        # Проверяем, не используется ли предмет в каких-либо вызовах
+        usage = await db.inventory_usage.find_one({"item_id": item_id})
+        if usage:
+            logger.error(f"Предмет с ID {item_id} используется в вызовах")
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "Нельзя удалить предмет, который используется в вызовах"}
+            )
+        
+        # Удаляем предмет
+        result = await inventory_collection.delete_one({"_id": ObjectId(item_id)})
+        if result.deleted_count == 0:
+            logger.error(f"Не удалось удалить предмет с ID {item_id}")
+            return JSONResponse(
+                status_code=500,
+                content={"detail": "Не удалось удалить предмет"}
+            )
+        
+        logger.info(f"Предмет с ID {item_id} успешно удален")
+        return {"detail": "Предмет успешно удален"}
+    except Exception as e:
+        logger.error(f"Ошибка при удалении предмета инвентаря: {str(e)}")
+        logger.error(traceback.format_exc())
+        return JSONResponse(
+            status_code=500,
+            content={"detail": str(e)}
+        )

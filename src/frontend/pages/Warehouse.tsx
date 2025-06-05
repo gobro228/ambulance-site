@@ -26,7 +26,12 @@ import {
   Tooltip,
   Autocomplete,
 } from '@mui/material';
-import { Add as AddIcon, Refresh as RefreshIcon } from '@mui/icons-material';
+import { 
+  Add as AddIcon, 
+  Refresh as RefreshIcon,
+  Delete as DeleteIcon,
+  Remove as RemoveIcon 
+} from '@mui/icons-material';
 import { predefinedItems } from '../data/inventoryItems.ts';
 
 // Перечисления в соответствии с бэкендом
@@ -66,6 +71,11 @@ interface ItemFormData {
   unit: UnitType;
 }
 
+interface Alert {
+  type: 'success' | 'error';
+  message: string;
+}
+
 const initialFormData: ItemFormData = {
   category: InventoryCategory.MEDICATIONS,
   quantity: 0,
@@ -84,6 +94,12 @@ export const Warehouse = () => {
   const [refreshKey, setRefreshKey] = useState(0); // Для принудительного обновления данных
   const [selectedPredefinedItem, setSelectedPredefinedItem] = useState<string | null>(null);
   const [availableItems, setAvailableItems] = useState<Array<string>>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<WarehouseItem | null>(null);
+  const [alert, setAlert] = useState<Alert | null>(null);
+  const [decreaseDialogOpen, setDecreaseDialogOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<WarehouseItem | null>(null);
+  const [decreaseAmount, setDecreaseAmount] = useState<number>(0);
 
   const fetchWarehouseItems = async () => {
     try {
@@ -242,6 +258,94 @@ export const Warehouse = () => {
     }
   };
 
+  const handleDeleteClick = (item: WarehouseItem) => {
+    setItemToDelete(item);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!itemToDelete) return;
+
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/inventory/${itemToDelete._id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || 'Не удалось удалить предмет');
+      }
+
+      // Обновляем список после удаления
+      handleRefresh();
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
+
+      // Показываем уведомление об успешном удалении
+      setAlert({
+        type: 'success',
+        message: 'Предмет успешно удален'
+      });
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      setAlert({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Не удалось удалить предмет'
+      });
+    }
+  };
+
+  const handleDecreaseClick = () => {
+    setDecreaseDialogOpen(true);
+  };
+
+  const handleDecreaseSubmit = async () => {
+    if (!selectedItem || decreaseAmount <= 0) return;
+
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/inventory/items/${selectedItem._id}/decrease`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: decreaseAmount
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || 'Не удалось уменьшить количество товара');
+      }
+
+      const updatedItem = await response.json();
+      
+      // Обновляем элемент в текущем состоянии
+      setItems(prevItems => 
+        prevItems.map(item => 
+          item._id === selectedItem._id ? { ...item, quantity: updatedItem.quantity } : item
+        )
+      );
+
+      // Закрываем диалог и очищаем состояние
+      setDecreaseDialogOpen(false);
+      setSelectedItem(null);
+      setDecreaseAmount(0);
+
+      // Показываем уведомление об успешном уменьшении
+      setAlert({
+        type: 'success',
+        message: 'Количество товара успешно уменьшено'
+      });
+    } catch (error) {
+      console.error('Error decreasing item quantity:', error);
+      setAlert({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Не удалось уменьшить количество товара'
+      });
+    }
+  };
+
   if (loading) {
     return (
       <Box 
@@ -281,6 +385,16 @@ export const Warehouse = () => {
           onClose={() => setError(null)}
         >
           {error}
+        </Alert>
+      )}
+
+      {alert && (
+        <Alert 
+          severity={alert.type} 
+          sx={{ mb: 2 }}
+          onClose={() => setAlert(null)}
+        >
+          {alert.message}
         </Alert>
       )}
 
@@ -341,22 +455,40 @@ export const Warehouse = () => {
             </Tooltip>
           </Stack>
 
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setIsDialogOpen(true)}
-            sx={{ 
-              height: 40,
-              backgroundColor: '#ff6b6b',
-              borderRadius: 1,
-              textTransform: 'none',
-              '&:hover': {
-                backgroundColor: '#ff5252',
-              },
-            }}
-          >
-            Добавить товар
-          </Button>
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="contained"
+              startIcon={<RemoveIcon />}
+              onClick={handleDecreaseClick}
+              sx={{ 
+                height: 40,
+                backgroundColor: '#ff9800',
+                borderRadius: 1,
+                textTransform: 'none',
+                '&:hover': {
+                  backgroundColor: '#f57c00',
+                },
+              }}
+            >
+              Убрать товар
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setIsDialogOpen(true)}
+              sx={{ 
+                height: 40,
+                backgroundColor: '#4caf50',
+                borderRadius: 1,
+                textTransform: 'none',
+                '&:hover': {
+                  backgroundColor: '#388e3c',
+                },
+              }}
+            >
+              Добавить товар
+            </Button>
+          </Stack>
         </Stack>
       </Paper>
 
@@ -516,6 +648,148 @@ export const Warehouse = () => {
             }}
           >
             Добавить
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Диалог подтверждения удаления */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        PaperProps={{
+          elevation: 0,
+          sx: {
+            borderRadius: 1,
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+          }
+        }}
+      >
+        <DialogTitle sx={{ color: '#495057' }}>
+          Подтверждение удаления
+        </DialogTitle>
+        <DialogContent>
+          {itemToDelete && (
+            <Box sx={{ py: 2 }}>
+              Вы действительно хотите удалить предмет "{itemToDelete.name}"?
+              {itemToDelete.quantity > 0 && (
+                <Box sx={{ mt: 1, color: 'warning.main' }}>
+                  Внимание: на складе еще остается {itemToDelete.quantity} {itemToDelete.unit}
+                </Box>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button
+            onClick={() => setDeleteDialogOpen(false)}
+            sx={{
+              color: '#495057',
+              '&:hover': {
+                backgroundColor: 'rgba(73, 80, 87, 0.1)',
+              }
+            }}
+          >
+            Отмена
+          </Button>
+          <Button
+            onClick={handleDeleteConfirm}
+            sx={{
+              backgroundColor: '#ff6b6b',
+              color: 'white',
+              '&:hover': {
+                backgroundColor: '#ff5252',
+              }
+            }}
+          >
+            Удалить
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Диалог уменьшения количества товара */}
+      <Dialog
+        open={decreaseDialogOpen}
+        onClose={() => setDecreaseDialogOpen(false)}
+        PaperProps={{
+          elevation: 0,
+          sx: {
+            borderRadius: 1,
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+          }
+        }}
+      >
+        <DialogTitle sx={{ color: '#495057' }}>
+          Убрать товар
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Товар</InputLabel>
+              <Select
+                value={selectedItem?._id || ''}
+                onChange={(e) => {
+                  const item = items.find(i => i._id === e.target.value);
+                  setSelectedItem(item || null);
+                }}
+                label="Товар"
+              >
+                {items.map((item) => (
+                  <MenuItem key={item._id} value={item._id}>
+                    {item.name} (в наличии: {item.quantity} {item.unit})
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {selectedItem && (
+              <TextField
+                label="Количество"
+                type="number"
+                value={decreaseAmount}
+                onChange={(e) => setDecreaseAmount(Math.max(0, parseInt(e.target.value) || 0))}
+                fullWidth
+                size="small"
+                required
+                inputProps={{ 
+                  min: 0,
+                  max: selectedItem.quantity
+                }}
+                helperText={`Максимально доступно: ${selectedItem.quantity} ${selectedItem.unit}`}
+              />
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button
+            onClick={() => {
+              setDecreaseDialogOpen(false);
+              setSelectedItem(null);
+              setDecreaseAmount(0);
+            }}
+            sx={{
+              color: '#495057',
+              '&:hover': {
+                backgroundColor: 'rgba(73, 80, 87, 0.1)',
+              }
+            }}
+          >
+            Отмена
+          </Button>
+          <Button
+            onClick={handleDecreaseSubmit}
+            disabled={!selectedItem || decreaseAmount <= 0 || decreaseAmount > selectedItem.quantity}
+            sx={{
+              backgroundColor: '#ff9800',
+              color: 'white',
+              '&:hover': {
+                backgroundColor: '#f57c00',
+              },
+              '&.Mui-disabled': {
+                backgroundColor: 'rgba(255, 152, 0, 0.5)',
+              }
+            }}
+          >
+            Убрать
           </Button>
         </DialogActions>
       </Dialog>

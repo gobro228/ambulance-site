@@ -28,10 +28,10 @@ DEFAULT_INVENTORY_SETS = [
         "call_type": "Зелёный поток",
         "description": "Стандартный набор для несрочных вызовов",
         "items": [
-            {"item_id": "tonometer", "quantity": 1, "required": True},  # Тонометр
-            {"item_id": "gloves", "quantity": 2, "required": True},     # Перчатки
-            {"item_id": "mask", "quantity": 2, "required": True},       # Маски
-            {"item_id": "thermometer", "quantity": 1, "required": True} # Термометр
+            {"item_id": "Тонометр", "quantity": 1, "required": True},
+            {"item_id": "Перчатки", "quantity": 2, "required": True},
+            {"item_id": "Маска", "quantity": 2, "required": True},
+            {"item_id": "Термометр", "quantity": 1, "required": True}
         ]
     },
     {
@@ -39,14 +39,14 @@ DEFAULT_INVENTORY_SETS = [
         "call_type": "Жёлтый поток",
         "description": "Набор для срочных вызовов",
         "items": [
-            {"item_id": "tonometer", "quantity": 1, "required": True},      # Тонометр
-            {"item_id": "gloves", "quantity": 4, "required": True},         # Перчатки
-            {"item_id": "mask", "quantity": 4, "required": True},           # Маски
-            {"item_id": "thermometer", "quantity": 1, "required": True},    # Термометр
-            {"item_id": "bandage", "quantity": 2, "required": True},       # Бинты
-            {"item_id": "syringe", "quantity": 5, "required": True},       # Шприцы
-            {"item_id": "analgin", "quantity": 2, "required": False},      # Анальгин
-            {"item_id": "sodium_chloride", "quantity": 1, "required": False} # Физраствор
+            {"item_id": "Тонометр", "quantity": 1, "required": True},
+            {"item_id": "Перчатки", "quantity": 4, "required": True},
+            {"item_id": "Маска", "quantity": 4, "required": True},
+            {"item_id": "Термометр", "quantity": 1, "required": True},
+            {"item_id": "Бинт стерильный", "quantity": 2, "required": True},
+            {"item_id": "Шприц 5мл", "quantity": 5, "required": True},
+            {"item_id": "Анальгин", "quantity": 2, "required": False},
+            {"item_id": "Натрия хлорид", "quantity": 1, "required": False}
         ]
     },
     {
@@ -54,17 +54,17 @@ DEFAULT_INVENTORY_SETS = [
         "call_type": "Красный поток",
         "description": "Набор для экстренных вызовов",
         "items": [
-            {"item_id": "tonometer", "quantity": 1, "required": True},      # Тонометр
-            {"item_id": "gloves", "quantity": 6, "required": True},         # Перчатки
-            {"item_id": "mask", "quantity": 6, "required": True},           # Маски
-            {"item_id": "thermometer", "quantity": 1, "required": True},    # Термометр
-            {"item_id": "bandage", "quantity": 4, "required": True},       # Бинты
-            {"item_id": "syringe", "quantity": 10, "required": True},      # Шприцы
-            {"item_id": "analgin", "quantity": 4, "required": True},       # Анальгин
-            {"item_id": "adrenaline", "quantity": 2, "required": True},    # Адреналин
-            {"item_id": "sodium_chloride", "quantity": 2, "required": True}, # Физраствор
-            {"item_id": "scissors", "quantity": 1, "required": True},       # Ножницы
-            {"item_id": "gauze", "quantity": 4, "required": True}          # Марля
+            {"item_id": "Тонометр", "quantity": 1, "required": True},
+            {"item_id": "Перчатки", "quantity": 6, "required": True},
+            {"item_id": "Маска", "quantity": 6, "required": True},
+            {"item_id": "Термометр", "quantity": 1, "required": True},
+            {"item_id": "Бинт стерильный", "quantity": 4, "required": True},
+            {"item_id": "Шприц 5мл", "quantity": 10, "required": True},
+            {"item_id": "Анальгин", "quantity": 4, "required": True},
+            {"item_id": "Адреналин", "quantity": 2, "required": True},
+            {"item_id": "Натрия хлорид", "quantity": 2, "required": True},
+            {"item_id": "Ножницы", "quantity": 1, "required": True},
+            {"item_id": "Салфетки марлевые", "quantity": 4, "required": True}
         ]
     }
 ] 

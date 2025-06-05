@@ -90,38 +90,6 @@ async def init_inventory_data(database):
             except Exception as e:
                 print(f"Ошибка при добавлении инвентаря {item['name']}: {e}")
 
-    # Добавляем наборы инвентаря
-    print("\nДобавляем наборы инвентаря...")
-    for inventory_set in DEFAULT_INVENTORY_SETS:
-        try:
-            # Получаем ID предметов по их названиям
-            for item in inventory_set["items"]:
-                inventory_item = await database.inventory_items.find_one({"name": item["item_id"]})
-                if inventory_item:
-                    item["item_id"] = str(inventory_item["_id"])
-
-            result = await database.inventory_sets.update_one(
-                {
-                    "name": inventory_set["name"],
-                    "call_type": inventory_set["call_type"]
-                },
-                {
-                    "$setOnInsert": {
-                        **inventory_set,
-                        "created_at": datetime.now(),
-                        "updated_at": datetime.now()
-                    }
-                },
-                upsert=True
-            )
-            if result.upserted_id:
-                print(f"Добавлен новый набор: {inventory_set['name']}")
-            else:
-                print(f"Набор {inventory_set['name']} уже существует")
-        except Exception as e:
-            print(f"Ошибка при добавлении набора {inventory_set['name']}: {e}")
-
-    print("\nИнициализация данных инвентаря завершена")
 
 async def init_inventory_usage(database):
     """
