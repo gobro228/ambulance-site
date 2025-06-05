@@ -22,8 +22,12 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  IconButton,
+  Tooltip,
+  Autocomplete,
 } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
+import { Add as AddIcon, Refresh as RefreshIcon } from '@mui/icons-material';
+import { predefinedItems } from '../data/inventoryItems.ts';
 
 // Перечисления в соответствии с бэкендом
 enum InventoryCategory {
@@ -55,21 +59,19 @@ interface WarehouseItem {
 }
 
 interface ItemFormData {
+  category: InventoryCategory;
+  quantity: number;
   name: string;
   description: string;
-  category: InventoryCategory;
   unit: UnitType;
-  quantity: number;
-  minimum_quantity: number;
 }
 
 const initialFormData: ItemFormData = {
+  category: InventoryCategory.MEDICATIONS,
+  quantity: 0,
   name: '',
   description: '',
-  category: InventoryCategory.MEDICATIONS,
   unit: UnitType.PIECE,
-  quantity: 0,
-  minimum_quantity: 0,
 };
 
 export const Warehouse = () => {
@@ -79,10 +81,9 @@ export const Warehouse = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState<ItemFormData>(initialFormData);
-
-  useEffect(() => {
-    fetchWarehouseItems();
-  }, []);
+  const [refreshKey, setRefreshKey] = useState(0); // Для принудительного обновления данных
+  const [selectedPredefinedItem, setSelectedPredefinedItem] = useState<string | null>(null);
+  const [availableItems, setAvailableItems] = useState<Array<string>>([]);
 
   const fetchWarehouseItems = async () => {
     try {
@@ -90,8 +91,15 @@ export const Warehouse = () => {
       setError(null);
       console.log('Начинаем загрузку данных...');
       
-      const response = await fetch('http://127.0.0.1:8000/api/inventory/items');
+      const response = await fetch('http://127.0.0.1:8000/api/inventory/items', {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+      
       console.log('Статус ответа:', response.status);
+      console.log('Заголовки ответа:', Object.fromEntries(response.headers.entries()));
       
       if (!response.ok) {
         const errorData = await response.text();
@@ -99,16 +107,20 @@ export const Warehouse = () => {
         throw new Error(`Не удалось загрузить данные склада: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
-      console.log('Получены данные:', data);
+      const rawData = await response.text(); // Сначала получаем текст ответа
+      console.log('Сырой ответ:', rawData);
+      
+      const data = JSON.parse(rawData); // Затем парсим его
+      console.log('Распарсенные данные:', data);
       
       if (!Array.isArray(data)) {
         console.error('Получены некорректные данные:', data);
         throw new Error('Получены некорректные данные с сервера');
       }
 
+      console.log('Количество полученных элементов:', data.length);
       setItems(data);
-      console.log('Данные успешно обновлены');
+      console.log('Данные успешно обновлены в состоянии');
     } catch (err) {
       console.error('Ошибка при загрузке данных:', err);
       setError(err instanceof Error ? err.message : 'Произошла ошибка при загрузке данных');
@@ -117,26 +129,85 @@ export const Warehouse = () => {
     }
   };
 
+  useEffect(() => {
+    fetchWarehouseItems();
+  }, [refreshKey]); // Обновляем данные при изменении refreshKey
+
+  useEffect(() => {
+    if (formData.category) {
+      const items = predefinedItems[formData.category]?.map(item => item.name) || [];
+      setAvailableItems(items);
+      setSelectedPredefinedItem(null); // Сбрасываем выбранный товар при смене категории
+    }
+  }, [formData.category]);
+
   const handleSubmit = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/inventory/items', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
+      setError(null);
+      
+      // Сначала проверяем, существует ли товар с таким именем
+      const response = await fetch(`http://127.0.0.1:8000/api/inventory/items/search?name=${encodeURIComponent(formData.name)}`);
+      
       if (!response.ok) {
-        throw new Error('Не удалось добавить товар');
+        throw new Error(`Ошибка при поиске товара: ${response.status} ${response.statusText}`);
       }
 
-      await fetchWarehouseItems();
+      const existingItems = await response.json();
+      const existingItem = existingItems.length > 0 ? existingItems[0] : null;
+
+      let finalResponse;
+
+      if (existingItem) {
+        // Если товар существует, обновляем его количество
+        const updatedQuantity = existingItem.quantity + formData.quantity;
+        
+        finalResponse = await fetch(`http://127.0.0.1:8000/api/inventory/${existingItem._id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            quantity: updatedQuantity,
+          }),
+        });
+
+        if (!finalResponse.ok) {
+          const errorText = await finalResponse.text();
+          console.error('Ошибка при обновлении:', errorText);
+          throw new Error(`Не удалось обновить товар: ${errorText}`);
+        }
+      } else {
+        // Если товар не существует, создаем новый
+        finalResponse = await fetch('http://127.0.0.1:8000/api/inventory/items', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ...formData,
+            minimum_quantity: 5
+          }),
+        });
+
+        if (!finalResponse.ok) {
+          const errorText = await finalResponse.text();
+          console.error('Ошибка при создании:', errorText);
+          throw new Error(`Не удалось создать товар: ${errorText}`);
+        }
+      }
+
       setIsDialogOpen(false);
       setFormData(initialFormData);
+      setSelectedPredefinedItem(null);
+      setRefreshKey(prev => prev + 1);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Произошла ошибка при добавлении товара');
+      console.error('Ошибка при обработке товара:', err);
+      setError(err instanceof Error ? err.message : 'Произошла ошибка при обработке товара');
     }
+  };
+
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1);
   };
 
   const getQuantityColor = (quantity: number, minimumQuantity: number) => {
@@ -155,6 +226,21 @@ export const Warehouse = () => {
   const filteredItems = selectedCategory === 'all' 
     ? items 
     : items.filter(item => item.category === selectedCategory);
+
+  const handlePredefinedItemChange = (event: any, newValue: string | null) => {
+    setSelectedPredefinedItem(newValue);
+    if (newValue && formData.category) {
+      const selectedItem = predefinedItems[formData.category].find(item => item.name === newValue);
+      if (selectedItem) {
+        setFormData(prev => ({
+          ...prev,
+          name: selectedItem.name,
+          description: selectedItem.description,
+          unit: selectedItem.unit as UnitType
+        }));
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -214,30 +300,46 @@ export const Warehouse = () => {
           alignItems={{ xs: 'stretch', sm: 'center' }}
           spacing={2}
         >
-          <FormControl 
-            variant="outlined" 
-            size="small"
-            sx={{ 
-              minWidth: 200,
-              '& .MuiOutlinedInput-root': {
-                borderRadius: 1,
-              }
-            }}
-          >
-            <InputLabel>Категория</InputLabel>
-            <Select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              label="Категория"
+          <Stack direction="row" spacing={2} alignItems="center">
+            <FormControl 
+              variant="outlined" 
+              size="small"
+              sx={{ 
+                minWidth: 200,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1,
+                }
+              }}
             >
-              <MenuItem value="all">Все категории</MenuItem>
-              {Object.values(InventoryCategory).map((category) => (
-                <MenuItem key={category} value={category}>
-                  {category}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+              <InputLabel>Категория</InputLabel>
+              <Select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                label="Категория"
+              >
+                <MenuItem value="all">Все категории</MenuItem>
+                {Object.values(InventoryCategory).map((category) => (
+                  <MenuItem key={category} value={category}>
+                    {category}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Tooltip title="Обновить данные">
+              <IconButton 
+                onClick={handleRefresh}
+                size="small"
+                sx={{ 
+                  color: '#ff6b6b',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                  }
+                }}
+              >
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
+          </Stack>
 
           <Button
             variant="contained"
@@ -281,41 +383,49 @@ export const Warehouse = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredItems.map((item) => (
-              <TableRow 
-                key={item._id}
-                sx={{
-                  backgroundColor: item.quantity <= item.minimum_quantity * 0.5 
-                    ? 'rgba(255, 107, 107, 0.05)' 
-                    : 'white',
-                  '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                  },
-                }}
-              >
-                <TableCell sx={{ color: '#495057' }}>{item.name}</TableCell>
-                <TableCell sx={{ color: '#495057' }}>{item.description}</TableCell>
-                <TableCell sx={{ color: '#495057' }}>{item.category}</TableCell>
-                <TableCell align="right" sx={{ color: '#495057' }}>{item.quantity}</TableCell>
-                <TableCell align="right" sx={{ color: '#495057' }}>{item.minimum_quantity}</TableCell>
-                <TableCell sx={{ color: '#495057' }}>{item.unit}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={getQuantityStatus(item)}
-                    color={getQuantityColor(item.quantity, item.minimum_quantity)}
-                    size="small"
-                    sx={{ 
-                      minWidth: 100,
-                      fontWeight: 500,
-                      borderRadius: 1
-                    }}
-                  />
-                </TableCell>
-                <TableCell sx={{ color: '#6c757d' }}>
-                  {new Date(item.updated_at).toLocaleString('ru-RU')}
+            {filteredItems.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} align="center" sx={{ py: 3, color: '#6c757d' }}>
+                  {loading ? 'Загрузка данных...' : 'Нет данных для отображения'}
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              filteredItems.map((item) => (
+                <TableRow 
+                  key={item._id}
+                  sx={{
+                    backgroundColor: item.quantity <= item.minimum_quantity * 0.5 
+                      ? 'rgba(255, 107, 107, 0.05)' 
+                      : 'white',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                    },
+                  }}
+                >
+                  <TableCell sx={{ color: '#495057' }}>{item.name}</TableCell>
+                  <TableCell sx={{ color: '#495057' }}>{item.description}</TableCell>
+                  <TableCell sx={{ color: '#495057' }}>{item.category}</TableCell>
+                  <TableCell align="right" sx={{ color: '#495057' }}>{item.quantity}</TableCell>
+                  <TableCell align="right" sx={{ color: '#495057' }}>{item.minimum_quantity}</TableCell>
+                  <TableCell sx={{ color: '#495057' }}>{item.unit}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={getQuantityStatus(item)}
+                      color={getQuantityColor(item.quantity, item.minimum_quantity)}
+                      size="small"
+                      sx={{ 
+                        minWidth: 100,
+                        fontWeight: 500,
+                        borderRadius: 1
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ color: '#6c757d' }}>
+                    {new Date(item.updated_at).toLocaleString('ru-RU')}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </TableContainer>
@@ -336,25 +446,7 @@ export const Warehouse = () => {
         <DialogTitle sx={{ pb: 1, color: '#495057' }}>Добавить новый товар</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-            <TextField
-              label="Наименование"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              fullWidth
-              size="small"
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
-            />
-            <TextField
-              label="Описание"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              multiline
-              rows={2}
-              fullWidth
-              size="small"
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
-            />
-            <FormControl fullWidth size="small">
+            <FormControl fullWidth size="small" required>
               <InputLabel>Категория</InputLabel>
               <Select
                 value={formData.category}
@@ -369,21 +461,25 @@ export const Warehouse = () => {
                 ))}
               </Select>
             </FormControl>
-            <FormControl fullWidth size="small">
-              <InputLabel>Единица измерения</InputLabel>
-              <Select
-                value={formData.unit}
-                onChange={(e) => setFormData({ ...formData, unit: e.target.value as UnitType })}
-                label="Единица измерения"
-                sx={{ borderRadius: 1 }}
-              >
-                {Object.values(UnitType).map((unit) => (
-                  <MenuItem key={unit} value={unit}>
-                    {unit}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+
+            {formData.category && (
+              <Autocomplete
+                value={selectedPredefinedItem}
+                onChange={handlePredefinedItemChange}
+                options={availableItems}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Выберите товар из списка"
+                    size="small"
+                    required
+                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
+                  />
+                )}
+                fullWidth
+              />
+            )}
+
             <TextField
               label="Количество"
               type="number"
@@ -391,15 +487,8 @@ export const Warehouse = () => {
               onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
               fullWidth
               size="small"
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
-            />
-            <TextField
-              label="Минимальное количество"
-              type="number"
-              value={formData.minimum_quantity}
-              onChange={(e) => setFormData({ ...formData, minimum_quantity: parseInt(e.target.value) || 0 })}
-              fullWidth
-              size="small"
+              required
+              inputProps={{ min: 0 }}
               sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
             />
           </Box>

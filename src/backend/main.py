@@ -136,8 +136,8 @@ async def startup():
             raise Exception("Не удалось подключиться к базе данных")
         logger.info("База данных успешно подключена")
         calls_collection = db["calls"]
-        inventory_collection = db["inventory"]
-        logger.info("Коллекции calls и inventory инициализированы")
+        inventory_collection = db["inventory_items"]
+        logger.info("Коллекции calls и inventory_items инициализированы")
         
         # Проверяем подключение к базе данных
         await db.command("ping")
@@ -228,7 +228,7 @@ async def get_inventory():
                 content={"detail": "Коллекция инвентаря не инициализирована"}
             )
         
-        logger.info("Выполняем запрос к коллекции inventory...")
+        logger.info("Выполняем запрос к коллекции inventory_items...")
         items = await inventory_collection.find().to_list(1000)
         logger.info(f"Найдено {len(items)} предметов")
         
@@ -239,6 +239,35 @@ async def get_inventory():
         return items
     except Exception as e:
         logger.error(f"Ошибка при получении инвентаря: {str(e)}")
+        logger.error(traceback.format_exc())
+        return JSONResponse(
+            status_code=500,
+            content={"detail": str(e)}
+        )
+
+@app.get("/api/inventory/items/search")
+async def search_inventory_items(name: str):
+    """Поиск предметов инвентаря по имени"""
+    try:
+        logger.info(f"Поиск предметов по имени: {name}")
+        if inventory_collection is None:
+            logger.error("Коллекция инвентаря не инициализирована")
+            return JSONResponse(
+                status_code=500,
+                content={"detail": "Коллекция инвентаря не инициализирована"}
+            )
+        
+        # Используем точное совпадение для поиска
+        items = await inventory_collection.find({"name": name}).to_list(1000)
+        logger.info(f"Найдено {len(items)} предметов")
+        
+        # Преобразуем ObjectId в строки для корректной сериализации
+        for item in items:
+            item["_id"] = str(item["_id"])
+        
+        return items
+    except Exception as e:
+        logger.error(f"Ошибка при поиске инвентаря: {str(e)}")
         logger.error(traceback.format_exc())
         return JSONResponse(
             status_code=500,
@@ -303,23 +332,48 @@ async def create_inventory_item(item: InventoryItemCreate):
         logger.error(f"Ошибка при создании предмета: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.put("/api/inventory/{item_id}", response_model=InventoryItem)
+@app.put("/api/inventory/{item_id}")
 async def update_inventory_item(item_id: str, item: InventoryItemUpdate):
     """Обновление информации о предмете инвентаря"""
-    db = app.state.db
-    update_data = item.dict(exclude_unset=True)
-    update_data["updated_at"] = datetime.now()
-    
-    result = await db.inventory_items.update_one(
-        {"_id": ObjectId(item_id)},
-        {"$set": update_data}
-    )
-    
-    if result.modified_count == 0:
-        raise HTTPException(status_code=404, detail="Предмет не найден")
-    
-    updated_item = await db.inventory_items.find_one({"_id": ObjectId(item_id)})
-    return updated_item
+    try:
+        if inventory_collection is None:
+            logger.error("Коллекция инвентаря не инициализирована")
+            return JSONResponse(
+                status_code=500,
+                content={"detail": "Коллекция инвентаря не инициализирована"}
+            )
+
+        logger.info(f"Обновление предмета {item_id} с данными: {item}")
+        update_data = item.dict(exclude_unset=True)
+        update_data["updated_at"] = datetime.now()
+        
+        logger.info(f"Подготовленные данные для обновления: {update_data}")
+        
+        try:
+            result = await inventory_collection.update_one(
+                {"_id": ObjectId(item_id)},
+                {"$set": update_data}
+            )
+        except Exception as e:
+            logger.error(f"Ошибка при выполнении запроса к MongoDB: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Ошибка базы данных: {str(e)}")
+        
+        if result.modified_count == 0:
+            logger.error(f"Предмет с id {item_id} не найден")
+            raise HTTPException(status_code=404, detail="Предмет не найден")
+        
+        updated_item = await inventory_collection.find_one({"_id": ObjectId(item_id)})
+        if updated_item:
+            updated_item["_id"] = str(updated_item["_id"])
+            logger.info(f"Предмет успешно обновлен: {updated_item}")
+            return updated_item
+        else:
+            logger.error(f"Не удалось получить обновленный предмет с id {item_id}")
+            raise HTTPException(status_code=404, detail="Не удалось получить обновленный предмет")
+    except Exception as e:
+        logger.error(f"Ошибка при обновлении предмета: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/inventory/usage/{call_id}", response_model=list[InventoryUsage])
 async def get_inventory_usage(call_id: str):

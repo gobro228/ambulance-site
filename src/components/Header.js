@@ -10,6 +10,7 @@ const Header = ({ onNavigate, currentUser, onLogout, toggleMenu, isMenuOpen }) =
                 <button onClick={() => onNavigate("create")}>Создать вызов</button>
                 <button onClick={() => onNavigate("current")}>Текущие вызовы</button>
                 <button onClick={() => onNavigate("history")}>История вызовов</button>
+                <button onClick={() => onNavigate("warehouse")}>Склад</button>
             </nav>
             <div className="account-section">
                 {currentUser ? (

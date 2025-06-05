@@ -16,6 +16,7 @@ const CreateCall = () => {
         age: "",
         address: "",
         type: "Зелёный поток",
+        priority: "green",
         dateTime: localDateTime,
         comments: "",
     });
@@ -40,19 +41,28 @@ const CreateCall = () => {
             return;
         }
 
+        // Определяем приоритет на основе типа вызова
+        const priority = form.type === "Красный поток" ? "red" : 
+                        form.type === "Жёлтый поток" ? "yellow" : "green";
+
+        // Форматируем дату в нужный формат
+        const date = new Date(form.dateTime);
+        const formattedDate = date.toISOString().slice(0, 19).replace('T', ' ');
+
         setLoading(true); // Включаем индикатор загрузки
         try {
             const response = await fetch("http://127.0.0.1:8000/calls/", {
-                method: "POST", // Тут была ошибка: не завершенный объект
+                method: "POST",
                 headers: {
-                    "Content-Type": "application/json", // Заголовок Content-Type
+                    "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
                     fio: form.name,
                     age: Number(form.age),
                     address: form.address,
                     type: form.type,
-                    date: form.dateTime,
+                    priority: priority,
+                    date: formattedDate,
                     comment: form.comments,
                 }),
             });
@@ -61,16 +71,16 @@ const CreateCall = () => {
             if (response.ok) {
                 try {
                     const data = await response.json();
-                    console.log("Data from server:", data); // Логируем данные от сервера
+                    console.log("Data from server:", data);
                     alert("Вызов успешно создан!");
                     setForm({
                         name: "",
                         age: "",
                         address: "",
                         type: "Зелёный поток",
+                        priority: "green",
                         dateTime: localDateTime,
                         comments: "",
-                        completed_at: "",
                     });
                 } catch (error) {
                     alert("Ошибка обработки данных от сервера!");
@@ -88,7 +98,6 @@ const CreateCall = () => {
             setLoading(false); // Выключаем индикатор загрузки
         }
     };
-
 
     return (
         <form className="create-call-form" onSubmit={handleSubmit}>
